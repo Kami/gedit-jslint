@@ -4075,3 +4075,5 @@ JSLINT = function () {
     return itself;
 
 }();
+
+exports.JSLINT = JSLINT;

@@ -3,6 +3,7 @@ from gettext import gettext as _
 import gtk
 import gedit
 import os
+import subprocess
 import simplejson
 
 # Menu item example, insert a new item in the Tools menu
@@ -98,7 +99,7 @@ class JSLintWindowHelper:
         jsondata = simplejson.dumps(doc.get_text(doc.get_iter_at_line(0), doc.get_end_iter()))
 
         tmpfile = open(tmpfile_path,"w")
-        tmpfile.writelines("load('" + jslint_path + "');")
+        tmpfile.writelines("var sys = require('sys'); var JSLINT = require('" + jslint_path.replace('.js', '') + "').JSLINT;")
         tmpfile.writelines("var body = " + jsondata + ";")
         tmpfile.write('''
             var result = JSLINT(body, {browser: true, forin: true});
@@ -111,14 +112,13 @@ class JSLintWindowHelper:
                 }
             }
             var output = '{"errors":[' + errors.join(",") + '], "result":"' + result + '"}';
-            print(output);
+            sys.print(output);
         ''')
         tmpfile.close()
 
-        command = 'js -f ' + tmpfile_path
-        fin,fout = os.popen4(command)
-        result = fout.read()
-        jslint_results = simplejson.loads(result)
+        command = 'node ' + tmpfile_path
+        stdout, stderr = subprocess.Popen(['node', tmpfile_path], stdout = subprocess.PIPE, stderr = subprocess.PIPE, close_fds = True).communicate()
+        jslint_results = simplejson.loads(stdout)
 
         if not self.pane:
             self.errorlines = gtk.ListStore(int,int,str)
@@ -170,4 +170,3 @@ class JSLintPlugin(gedit.Plugin):
 
     def update_ui(self, window):
         self._instances[window].update_ui()
-
